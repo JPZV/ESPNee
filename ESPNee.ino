@@ -1,29 +1,19 @@
-// PsNee / psxdev.net version
-// For Arduino and ATtiny
+// ESPNee, a PSNee port / psxdev.net version
+// For ESP8266
 //
 // Quick start: Select your hardware via the #defines, compile + upload the code, install in PSX.
 // There are some pictures in the development thread ( http://www.psxdev.net/forum/viewtopic.php?f=47&t=1262&start=120 )
 // Beware to use the PSX 3.5V / 3.3V power, *NOT* 5V! The installation pictures include an example.
 //
-// Arduinos:
-//  Use #define ARDUINO_328_BOARD for the following:
-//  - Arduino Pro Mini @8Mhz and @16Mhz (supported, tested)
-//  - Arduino Uno @8Mhz and @16Mhz (supported, tested)
-//  Use #define ARDUINO_32UX_BOARD for the following:
-//  - Pro Micro (supported, tested)
-//  - Arduino Leonardo (supported, untested)
+// Use #define ESP_12 for the following:
+// - ESP-12 based MCU (supported, untested)
+// - Most "ESP8266" Dev modules (supported, untested)
+// Use #define ESP_32 for the following:
+// - ESP-32 based MCU (unsupported, untested)
+// - Most ESP32 Dev modules (unsupported, untested)
 
-// ATtiny:
-//  - ATtiny85: Should work the same as ATtiny45 (supported, untested)
-//  - ATtiny45: LFUSE 0xE2  HFUSE 0xDF > internal oscillator, full 8Mhz speed (supported, tested)
-//  - ATtiny25: Should work the same as ATtiny45 but doesn't have enough Flash nor RAM for PSNEEDEBUG (supported, untested)
-//  - Use #define ATTINY_X5
-//
-// To use ATtiny with the Arduino environment, an ATtiny core has to be installed.
-//
 // PAL PM-41 consoles are supported with #define APPLY_PSONE_PAL_BIOS_PATCH,
-// but only on boards with ATmega chips (Arduinos).
-// Also, the Arduino must be flashed using SPI (deleting the bootloader), since I expect a signal ~1 second after power on.
+// but it's not implemented right now.
 //
 // This code defaults to multi-region, meaning it will unlock PAL, NTSC-U and NTSC-J machines.
 // You can optimize boot times for your console further. See "// inject symbols now" in the main loop.
@@ -33,17 +23,9 @@
 //+-------------------------------------------------------------------------------------------+
 //
 // To fix the timer problem with APPLY_PSONE_PAL_BIOS_PATCH look at line 223
-//
-// 2 main branches available:
-//  - ATmega based > easy to use, fast and nice features for development, recommended
-//  - ATtiny based > for minimal installs
 
-// ATmega32U4/32U2 boards (as in the Pro Micro) have to use different pinouts than the 'regular'
-// Arduino ATMega328's. For these, a different define must be used.
-
-//#define ARDUINO_328_BOARD
-//#define ARDUINO_32UX_BOARD
-//#define ATTINY_X5
+//#define ESP_12
+//#define ESP_32
 
 //#define APPLY_PSONE_PAL_BIOS_PATCH
 
@@ -51,99 +33,89 @@
 
 #include <avr/pgmspace.h>
 
-#if defined(ARDUINO_328_BOARD)
-// board pins (code requires porting to reflect any changes)
 #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-#define BIOS_A18 4          // connect to PSOne BIOS A18 (pin 31 on that chip)
-#define BIOS_D2  5          // connect to PSOne BIOS D2 (pin 15 on that chip)
+  #error "PAL PSOne patch is not supported yet!"
 #endif
-#define sqck 6          // connect to PSX HC-05 SQCK pin
-#define subq 7          // connect to PSX HC-05 SUBQ pin
-#define data 8          // connect to point 6 in old modchip diagrams
-#define gate_wfck 9     // connect to point 5 in old modchip diagrams
-// MCU I/O definitions
-#define SUBQPORT PIND       // MCU port for the 2 SUBQ sampling inputs
-#define SQCKBIT 6           // PD6 "SQCK" < Mechacon pin 26 (PU-7 and early PU-8 Mechacons: pin 41)
-#define SUBQBIT 7           // PD7 "SUBQ" < Mechacon pin 24 (PU-7 and early PU-8 Mechacons: pin 39)
-#define GATEWFCKPORT PINB   // MCU port for the gate input (used for WFCK)
-#define DATAPORT PORTB      // MCU port for the gate input (used for WFCK)
-#define GATEWFCKBIT 1       // PB1
-#define DATABIT 0           // PB0
-#if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-#define BIOSPATCHPORTIN  PIND
-#define BIOSPATCHPORTOUT PORTD
-#define BIOSPATCHDDR     DDRD
-#define BIOS_A18_BIT 4
-#define BIOS_D2_BIT  5
-#endif
-#elif defined(ARDUINO_32UX_BOARD) // ATMega32U2/ATMega32U4
-#if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-#define BIOS_A18 8
-#define BIOS_D2  9
-#endif
-#define sqck 2
-#define subq 3
-#define data 14
-#define gate_wfck 15
-// MCU I/O definitions
-#define SUBQPORT PIND
-#define SQCKBIT 1           // PD1
-#define SUBQBIT 0           // PD0
-#define GATEWFCKPORT PINB
-#define DATAPORT PORTB
-#define GATEWFCKBIT 1       // PB1
-#define DATABIT 3           // PB3
-#if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-#define BIOSPATCHPORTIN  PINB
-#define BIOSPATCHPORTOUT PORTB
-#define BIOSPATCHDDR     DDRB
-#define BIOS_A18_BIT 4      //PB4
-#define BIOS_D2_BIT  5      //PB5
-#endif
-#elif defined(ATTINY_X5) // ATtiny 25/45/85
-// extras
-#define USINGSOFTWARESERIAL
-// board pins (Do not change. Changing pins requires adjustments to MCU I/O definitions)
-#define sqck 0
-#define subq 1
-#define data 2
-#define gate_wfck 4
-#define debugtx 3
-// MCU I/O definitions
-#define SUBQPORT PINB
-#define SQCKBIT 0
-#define SUBQBIT 1
-#define GATEWFCKPORT PINB
-#define DATAPORT PORTB
-#define GATEWFCKBIT 4
-#define DATABIT 2
-#if defined(APPLY_PSONE_PAL_BIOS_PATCH)
-#error "ATtiny does not support PAL PSOne patch yet!"
-#endif
+
+#if defined(ESP_12)
+  // board pins (code requires porting to reflect any changes)
+  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
+    #define BIOS_A18 4          // connect to PSOne BIOS A18 (pin 31 on that chip)
+    #define BIOS_D2  5          // connect to PSOne BIOS D2 (pin 15 on that chip)
+  #endif
+  #define sqck 14          // connect to PSX HC-05 SQCK pin
+  #define subq 12          // connect to PSX HC-05 SUBQ pin
+  #define data 13          // connect to point 6 in old modchip diagrams
+  #define gate_wfck 15     // connect to point 5 in old modchip diagrams
+  // MCU I/O definitions
+  #define GPIO_OUT_W1TS 0x60000304
+  #define GPIO_OUT_W1TC 0x60000308
+  #define GPIO_IN 0x60000318
+  #define SQCKBIT sqck
+  #define SUBQBIT subq
+  #define DATABIT data
+  #define WFCKBIT gate_wfck
+  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
+    #define BIOSPATCHPORTIN  PIND
+    #define BIOSPATCHPORTOUT PORTD
+    #define BIOSPATCHDDR     DDRD
+    #define BIOS_A18_BIT 4
+    #define BIOS_D2_BIT  5
+  #endif
+#elif defined(ESP_32)
+  #error "ESP-32 is not implemented yet!"
+  // board pins (code requires porting to reflect any changes)
+  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
+    #define BIOS_A18 8
+    #define BIOS_D2  9
+  #endif
+  #define sqck 2
+  #define subq 3
+  #define data 14
+  #define gate_wfck 15
+  // MCU I/O definitions
+  #define SUBQPORT PIND
+  #define SQCKBIT 1           // PD1
+  #define SUBQBIT 0           // PD0
+  #define GATEWFCKPORT PINB
+  #define DATAPORT PORTB
+  #define GATEWFCKBIT 1       // PB1
+  #define DATABIT 3           // PB3
+  #if defined(APPLY_PSONE_PAL_BIOS_PATCH)
+    #define BIOSPATCHPORTIN  PINB
+    #define BIOSPATCHPORTOUT PORTB
+    #define BIOSPATCHDDR     DDRB
+    #define BIOS_A18_BIT 4      //PB4
+    #define BIOS_D2_BIT  5      //PB5
+  #endif
 #else
-#error "Select a board!"
+  #error "Select a board!"
 #endif
 
 #if defined(PSNEEDEBUG) && defined(USINGSOFTWARESERIAL)
-#include <SoftwareSerial.h>
-SoftwareSerial mySerial(-1, 3); // RX, TX. (RX -1 = off)
-#define DEBUG_PRINT(x)     mySerial.print(x)
-#define DEBUG_PRINTHEX(x)  mySerial.print(x, HEX)
-#define DEBUG_PRINTLN(x)   mySerial.println(x)
-#define DEBUG_FLUSH        mySerial.flush()
+  #include <SoftwareSerial.h>
+  SoftwareSerial mySerial(-1, 3); // RX, TX. (RX -1 = off)
+  #define DEBUG_PRINT(x)     mySerial.print(x)
+  #define DEBUG_PRINTHEX(x)  mySerial.print(x, HEX)
+  #define DEBUG_PRINTLN(x)   mySerial.println(x)
+  #define DEBUG_FLUSH        mySerial.flush()
 #elif defined(PSNEEDEBUG) && !defined(USINGSOFTWARESERIAL)
-#define DEBUG_PRINT(x)     Serial.print(x)
-#define DEBUG_PRINTHEX(x)  Serial.print(x, HEX)
-#define DEBUG_PRINTLN(x)   Serial.println(x)
-#define DEBUG_FLUSH        Serial.flush()
+  #define DEBUG_PRINT(x)     Serial.print(x)
+  #define DEBUG_PRINTHEX(x)  Serial.print(x, HEX)
+  #define DEBUG_PRINTLN(x)   Serial.println(x)
+  #define DEBUG_FLUSH        Serial.flush()
 #else
-#define DEBUG_PRINT(x)
-#define DEBUG_PRINTHEX(x)
-#define DEBUG_PRINTLN(x)
-#define DEBUG_FLUSH
+  #define DEBUG_PRINT(x)
+  #define DEBUG_PRINTHEX(x)
+  #define DEBUG_PRINTLN(x)
+  #define DEBUG_FLUSH
 #endif
 
 #define NOP __asm__ __volatile__ ("nop\n\t")
+
+#define bitClearESP(pin) (*((volatile uint32_t *)GPIO_OUT_W1TC) = bit(pin))
+#define bitWriteESP(pin) (*((volatile uint32_t *)GPIO_OUT_W1TS) = bit(pin))
+#define bitReadESP(pin) (*((volatile uint32_t *)GPIO_IN) & (bit(pin)))
 
 // Setup() detects which (of 2) injection methods this PSX board requires, then stores it in pu22mode.
 boolean pu22mode;
@@ -180,7 +152,7 @@ void inject_SCEX(char region)
     if (readBit(bit_counter, region == 'e' ? SCEEData : region == 'a' ? SCEAData : SCEIData) == 0)
     {
       pinMode(data, OUTPUT);
-      bitClear(GATEWFCKPORT, DATABIT); // data low
+      bitClearESP(DATABIT); // data low
       delayMicroseconds(delay_between_bits);
     }
     else
@@ -189,8 +161,13 @@ void inject_SCEX(char region)
         pinMode(data, OUTPUT);
         unsigned long now = micros();
         do {
-          bool wfck_sample = bitRead(GATEWFCKPORT, GATEWFCKBIT);
-          bitWrite(DATAPORT, DATABIT, wfck_sample); // output wfck signal on data pin
+          bool wfck_sample = bitReadESP(WFCKBIT);
+          if (wfck_sample) {
+            bitWriteESP(DATABIT); // output wfck signal on data pin
+          }
+          else {
+            bitClearESP(DATABIT); // output wfck signal on data pin
+          }
         }
         while ((micros() - now) < delay_between_bits);
       }
@@ -202,7 +179,7 @@ void inject_SCEX(char region)
   }
 
   pinMode(data, OUTPUT);
-  bitClear(GATEWFCKPORT, DATABIT); // pull data low
+  bitClearESP(DATABIT); // pull data low
   delay(delay_between_injections);
 }
 
@@ -251,12 +228,12 @@ void setup()
   pinMode(debugtx, OUTPUT); // software serial tx pin
   mySerial.begin(115200); // 13,82 bytes in 12ms, max for softwareserial. (expected data: ~13 bytes / 12ms) // update: this is actually quicker
 #elif defined(PSNEEDEBUG) && !defined(USINGSOFTWARESERIAL)
-  Serial.begin(500000); // 60 bytes in 12ms (expected data: ~26 bytes / 12ms) // update: this is actually quicker
+  Serial.begin(115200); // 60 bytes in 12ms (expected data: ~26 bytes / 12ms) // update: this is actually quicker
   DEBUG_PRINT("MCU frequency: "); DEBUG_PRINT(F_CPU); DEBUG_PRINTLN(" Hz");
   DEBUG_PRINTLN("Waiting for SQCK..");
 #endif
 
-#if defined(ARDUINO_328_BOARD) || defined(ARDUINO_32UX_BOARD)
+#if defined(ESP_12)
   pinMode(LED_BUILTIN, OUTPUT); // Blink on injection / debug.
   digitalWrite(LED_BUILTIN, HIGH); // mark begin of setup
 #endif
@@ -292,21 +269,17 @@ void setup()
     pu22mode = 0;
   }
 
-#ifdef ATTINY_X5
-  DEBUG_PRINT("m "); DEBUG_PRINTLN(pu22mode);
-#else
   DEBUG_PRINT("highs: "); DEBUG_PRINT(highs); DEBUG_PRINT(" lows: "); DEBUG_PRINTLN(lows);
   DEBUG_PRINT("pu22mode: "); DEBUG_PRINTLN(pu22mode);
   // Power saving
   // Disable the ADC by setting the ADEN bit (bit 7)  of the ADCSRA register to zero.
-  ADCSRA = ADCSRA & B01111111;
+  //ADCSRA = ADCSRA & B01111111;
   // Disable the analog comparator by setting the ACD bit (bit 7) of the ACSR register to one.
-  ACSR = B10000000;
+  //ACSR = B10000000;
   // Disable digital input buffers on all analog input pins by setting bits 0-5 of the DIDR0 register to one.
-  DIDR0 = DIDR0 | B00111111;
-#endif
+  //DIDR0 = DIDR0 | B00111111;
 
-#if defined(ARDUINO_328_BOARD) || defined(ARDUINO_32UX_BOARD)
+#if defined(ESP_12)
   digitalWrite(LED_BUILTIN, LOW); // setup complete
 #endif
 
@@ -331,7 +304,7 @@ start:
   // Capture 8 bits for 12 runs > complete SUBQ transmission
   bitpos = 0;
   for (; bitpos < 8; bitpos++) {
-    while (bitRead(SUBQPORT, SQCKBIT) == 1) {
+    while (bitReadESP(SQCKBIT) == 1) {
       // wait for clock to go low..
       // a timeout resets the 12 byte stream in case the PSX sends malformatted clock pulses, as happens on bootup
       timeout_clock_counter++;
@@ -344,9 +317,9 @@ start:
     }
 
     // wait for clock to go high..
-    while ((bitRead(SUBQPORT, SQCKBIT)) == 0);
+    while ((bitReadESP(SQCKBIT)) == 0);
 
-    sample = bitRead(SUBQPORT, SUBQBIT);
+    sample = bitReadESP(SUBQBIT);
     bitbuf |= sample << bitpos;
 
     timeout_clock_counter = 0; // no problem with this bit
@@ -364,17 +337,6 @@ start:
   interrupts(); // end critical section
 
   // log SUBQ packets. We only have 12ms to get the logs written out. Slower MCUs get less formatting.
-#ifdef ATTINY_X5
-  if (!(scbuf[0] == 0 && scbuf[1] == 0 && scbuf[2] == 0 && scbuf[3] == 0)) { // a bad sector read is all 0 except for the CRC fields. Don't log it.
-    for (int i = 0; i < 12; i++) {
-      if (scbuf[i] < 0x10) {
-        DEBUG_PRINT("0"); // padding
-      }
-      DEBUG_PRINTHEX(scbuf[i]);
-    }
-    DEBUG_PRINTLN("");
-  }
-#else
   if (!(scbuf[0] == 0 && scbuf[1] == 0 && scbuf[2] == 0 && scbuf[3] == 0)) {
     for (int i = 0; i < 12; i++) {
       if (scbuf[i] < 0x10) {
@@ -385,7 +347,6 @@ start:
     }
     DEBUG_PRINTLN("");
   }
-#endif
 
   // check if read head is in wobble area
   // We only want to unlock game discs (0x41) and only if the read head is in the outer TOC area.
@@ -419,12 +380,8 @@ start:
     // Hysteresis naturally goes to 0 otherwise (the read head moved).
     hysteresis = 11;
 
-#ifdef ATTINY_X5
-    DEBUG_PRINTLN("!");
-#else
     DEBUG_PRINTLN("INJECT!INJECT!INJECT!INJECT!INJECT!INJECT!");
-#endif
-#if defined(ARDUINO_328_BOARD) || defined(ARDUINO_32UX_BOARD)
+#if defined(ESP_12)
     digitalWrite(LED_BUILTIN, HIGH);
 #endif
 
@@ -449,7 +406,7 @@ start:
       pinMode(gate_wfck, INPUT); // high-z the line, we're done
     }
     pinMode(data, INPUT); // high-z the line, we're done
-#if defined(ARDUINO_328_BOARD) || defined(ARDUINO_32UX_BOARD)
+#if defined(ESP_12)
     digitalWrite(LED_BUILTIN, LOW);
 #endif
   }
