@@ -43,10 +43,10 @@
     #define BIOS_A18 4          // connect to PSOne BIOS A18 (pin 31 on that chip)
     #define BIOS_D2  5          // connect to PSOne BIOS D2 (pin 15 on that chip)
   #endif
-  #define sqck 14          // connect to PSX HC-05 SQCK pin
-  #define subq 12          // connect to PSX HC-05 SUBQ pin
-  #define data 13          // connect to point 6 in old modchip diagrams
-  #define gate_wfck 15     // connect to point 5 in old modchip diagrams
+  #define sqck 5 //(D1)        // connect to PSX HC-05 SQCK pin
+  #define subq 4 //(D2)        // connect to PSX HC-05 SUBQ pin
+  #define data 14 //(D5)        // connect to point 6 in old modchip diagrams
+  #define gate_wfck 12 //(D6)   // connect to point 5 in old modchip diagrams
   // MCU I/O definitions
   #define GPIO_OUT_W1TS 0x60000304
   #define GPIO_OUT_W1TC 0x60000308
@@ -240,6 +240,7 @@ void setup()
 
   // wait for console power on and stable signals
   while (!digitalRead(sqck));
+  DEBUG_PRINTLN("Waiting for WFCK..");
   while (!digitalRead(gate_wfck));
 
   // if enabled: patches PAL PSOne consoles so they start all region games
